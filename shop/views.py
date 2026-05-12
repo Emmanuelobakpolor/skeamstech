@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
+import logging
 from .models import ShopTab, ShopCategory, ShopProduct
 from .serializers import (
     ShopTabSerializer,
@@ -13,6 +14,8 @@ from .serializers import (
     AdminShopCategorySerializer,
     AdminShopProductSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class ShopTabsListView(APIView):
@@ -116,11 +119,16 @@ class AdminShopTabListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = AdminShopTabSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            serializer = AdminShopTabSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            logger.error(f"Validation errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception(f"Error creating tab: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AdminShopTabDetailView(APIView):
@@ -182,11 +190,16 @@ class AdminShopCategoryListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = AdminShopCategorySerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            serializer = AdminShopCategorySerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            logger.error(f"Validation errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception(f"Error creating category: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AdminShopCategoryDetailView(APIView):
@@ -249,11 +262,16 @@ class AdminShopProductListCreateView(APIView):
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = AdminShopProductSerializer(data=request.data, context={'request': request})
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            serializer = AdminShopProductSerializer(data=request.data, context={'request': request})
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            logger.error(f"Validation errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception(f"Error creating product: {str(e)}")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class AdminShopProductDetailView(APIView):

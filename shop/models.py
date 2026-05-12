@@ -68,3 +68,63 @@ class ShopProduct(models.Model):
 
     def __str__(self):
         return f"{self.category.name} — {self.name}"
+
+
+class ProductImage(models.Model):
+    """Gallery images for a product"""
+    product = models.ForeignKey(
+        ShopProduct,
+        on_delete=models.CASCADE,
+        related_name='images'
+    )
+    image = models.ImageField(upload_to='shop_products/gallery/')
+    order = models.PositiveIntegerField(default=0, help_text="Display order")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'created_at']
+
+    def __str__(self):
+        return f"Image #{self.pk} for {self.product.name}"
+
+
+class ProductModel(models.Model):
+    """A named sub-variant of a product (e.g. 'Model X', 'Model Y')"""
+    product = models.ForeignKey(
+        ShopProduct,
+        on_delete=models.CASCADE,
+        related_name='product_models'
+    )
+    name = models.CharField(max_length=200)
+    spec_speed = models.CharField(max_length=100, blank=True)
+    spec_weight = models.CharField(max_length=100, blank=True)
+    spec_voltage = models.CharField(max_length=100, blank=True)
+    spec_power = models.CharField(max_length=100, blank=True)
+    spec_storage = models.CharField(max_length=100, blank=True)
+    spec_connectivity = models.CharField(max_length=100, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'name']
+
+    def __str__(self):
+        return f"{self.product.name} — {self.name}"
+
+
+class ProductModelImage(models.Model):
+    """Gallery images for a ProductModel"""
+    model = models.ForeignKey(
+        ProductModel,
+        on_delete=models.CASCADE,
+        related_name='images'
+    )
+    image = models.ImageField(upload_to='shop_products/model_gallery/')
+    order = models.PositiveIntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['order', 'created_at']
+
+    def __str__(self):
+        return f"Image #{self.pk} for model {self.model.name}"

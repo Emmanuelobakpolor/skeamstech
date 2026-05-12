@@ -3,13 +3,57 @@ from rest_framework.serializers import (
     SerializerMethodField,
     CharField,
 )
-from .models import ShopTab, ShopCategory, ShopProduct
+from .models import ShopTab, ShopCategory, ShopProduct, ProductImage, ProductModel, ProductModelImage
+
+
+# Public read-only serializers for product images
+class ProductImageSerializer(ModelSerializer):
+    image_url = SerializerMethodField()
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image_url', 'order']
+
+
+class ProductModelImageSerializer(ModelSerializer):
+    image_url = SerializerMethodField()
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+
+    class Meta:
+        model = ProductModelImage
+        fields = ['id', 'image_url', 'order']
+
+
+class ProductModelSerializer(ModelSerializer):
+    images = ProductModelImageSerializer(many=True, read_only=True)
+    specs = SerializerMethodField()
+
+    def get_specs(self, obj):
+        specs = {}
+        for key in ['speed', 'weight', 'voltage', 'power', 'storage', 'connectivity']:
+            val = getattr(obj, f'spec_{key}', '')
+            if val:
+                specs[key] = val
+        return specs
+
+    class Meta:
+        model = ProductModel
+        fields = ['id', 'name', 'specs', 'images', 'order']
 
 
 class ShopProductSerializer(ModelSerializer):
     image_url = SerializerMethodField()
     specs = SerializerMethodField()
     category_name = CharField(source='category.name', read_only=True)
+    images = ProductImageSerializer(many=True, read_only=True)
+    models = ProductModelSerializer(many=True, read_only=True, source='product_models')
 
     def get_image_url(self, obj):
         request = self.context.get('request')
@@ -41,6 +85,8 @@ class ShopProductSerializer(ModelSerializer):
             'description',
             'application',
             'image_url',
+            'images',
+            'models',
             'specs',
             'category_name',
         ]
@@ -65,6 +111,58 @@ class ShopTabSerializer(ModelSerializer):
 # ============================================================================
 # ADMIN SERIALIZERS (for write operations)
 # ============================================================================
+
+
+class AdminProductImageSerializer(ModelSerializer):
+    """Writable serializer for product images"""
+    image_url = SerializerMethodField()
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+
+    class Meta:
+        model = ProductImage
+        fields = ['id', 'image', 'image_url', 'order', 'created_at']
+        read_only_fields = ['id', 'image_url', 'created_at']
+        extra_kwargs = {'image': {'required': True, 'write_only': True}}
+
+
+class AdminProductModelImageSerializer(ModelSerializer):
+    """Writable serializer for product model images"""
+    image_url = SerializerMethodField()
+
+    def get_image_url(self, obj):
+        request = self.context.get('request')
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+
+    class Meta:
+        model = ProductModelImage
+        fields = ['id', 'image', 'image_url', 'order', 'created_at']
+        read_only_fields = ['id', 'image_url', 'created_at']
+        extra_kwargs = {'image': {'required': True, 'write_only': True}}
+
+
+class AdminProductModelSerializer(ModelSerializer):
+    """Writable serializer for product models"""
+    images = AdminProductModelImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProductModel
+        fields = [
+            'id',
+            'name',
+            'spec_speed',
+            'spec_weight',
+            'spec_voltage',
+            'spec_power',
+            'spec_storage',
+            'spec_connectivity',
+            'order',
+            'created_at',
+            'images',
+        ]
+        read_only_fields = ['id', 'created_at', 'images']
 
 
 class AdminShopTabSerializer(ModelSerializer):
@@ -109,6 +207,8 @@ class AdminShopProductSerializer(ModelSerializer):
 
     image_url = SerializerMethodField()
     category_name = CharField(source='category.name', read_only=True)
+    images = AdminProductImageSerializer(many=True, read_only=True)
+    product_models = AdminProductModelSerializer(many=True, read_only=True, source='product_models')
 
     def get_image_url(self, obj):
         if obj.image:
@@ -126,6 +226,8 @@ class AdminShopProductSerializer(ModelSerializer):
             'application',
             'image',
             'image_url',
+            'images',
+            'product_models',
             'spec_speed',
             'spec_weight',
             'spec_voltage',
@@ -135,7 +237,7 @@ class AdminShopProductSerializer(ModelSerializer):
             'is_active',
             'created_at',
         ]
-        read_only_fields = ['id', 'category_name', 'image_url', 'created_at']
+        read_only_fields = ['id', 'category_name', 'image_url', 'images', 'product_models', 'created_at']
         extra_kwargs = {
             'image': {
                 'required': False,

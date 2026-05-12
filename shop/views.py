@@ -5,7 +5,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework import status
 import logging
-from .models import ShopTab, ShopCategory, ShopProduct
+from .models import ShopTab, ShopCategory, ShopProduct, ProductImage, ProductModel, ProductModelImage
 from .serializers import (
     ShopTabSerializer,
     ShopCategorySerializer,
@@ -13,6 +13,9 @@ from .serializers import (
     AdminShopTabSerializer,
     AdminShopCategorySerializer,
     AdminShopProductSerializer,
+    AdminProductImageSerializer,
+    AdminProductModelSerializer,
+    AdminProductModelImageSerializer,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,6 +33,7 @@ class ShopTabsListView(APIView):
                     Prefetch(
                         'products',
                         queryset=ShopProduct.objects.filter(is_active=True)
+                        .prefetch_related('images', 'product_models__images')
                     )
                 )
             )
@@ -311,5 +315,175 @@ class AdminShopProductDetailView(APIView):
         obj = self.get_object(pk)
         if not obj:
             return Response(status=status.HTTP_404_NOT_FOUND)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ============================================================================
+# PRODUCT IMAGE SUB-RESOURCE ENDPOINTS
+# ============================================================================
+
+
+class AdminProductImageListCreateView(APIView):
+    """GET all images for a product + POST to add a new image"""
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_product(self, product_pk):
+        try:
+            return ShopProduct.objects.get(pk=product_pk)
+        except ShopProduct.DoesNotExist:
+            return None
+
+    def get(self, request, product_pk):
+        product = self.get_product(product_pk)
+        if not product:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminProductImageSerializer(
+            product.images.all(), many=True, context={'request': request}
+        )
+        return Response(serializer.data)
+
+    def post(self, request, product_pk):
+        product = self.get_product(product_pk)
+        if not product:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminProductImageSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(product=product)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminProductImageDetailView(APIView):
+    """DELETE a single product image"""
+    permission_classes = [AllowAny]
+
+    def get_object(self, product_pk, image_pk):
+        try:
+            return ProductImage.objects.get(pk=image_pk, product_id=product_pk)
+        except ProductImage.DoesNotExist:
+            return None
+
+    def delete(self, request, product_pk, image_pk):
+        obj = self.get_object(product_pk, image_pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj.image.delete(save=False)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ============================================================================
+# PRODUCT MODEL SUB-RESOURCE ENDPOINTS
+# ============================================================================
+
+
+class AdminProductModelListCreateView(APIView):
+    """GET all models for a product + POST to create a new model"""
+    permission_classes = [AllowAny]
+    parser_classes = [JSONParser]
+
+    def get_product(self, product_pk):
+        try:
+            return ShopProduct.objects.get(pk=product_pk)
+        except ShopProduct.DoesNotExist:
+            return None
+
+    def get(self, request, product_pk):
+        product = self.get_product(product_pk)
+        if not product:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminProductModelSerializer(
+            product.product_models.prefetch_related('images').all(),
+            many=True, context={'request': request}
+        )
+        return Response(serializer.data)
+
+    def post(self, request, product_pk):
+        product = self.get_product(product_pk)
+        if not product:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminProductModelSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(product=product)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminProductModelDetailView(APIView):
+    """PATCH/DELETE a single product model"""
+    permission_classes = [AllowAny]
+    parser_classes = [JSONParser]
+
+    def get_object(self, product_pk, model_pk):
+        try:
+            return ProductModel.objects.get(pk=model_pk, product_id=product_pk)
+        except ProductModel.DoesNotExist:
+            return None
+
+    def patch(self, request, product_pk, model_pk):
+        obj = self.get_object(product_pk, model_pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminProductModelSerializer(obj, data=request.data, partial=True,
+                                                  context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, product_pk, model_pk):
+        obj = self.get_object(product_pk, model_pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ============================================================================
+# PRODUCT MODEL IMAGE SUB-RESOURCE ENDPOINTS
+# ============================================================================
+
+
+class AdminProductModelImageListCreateView(APIView):
+    """POST to add an image to a product model"""
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser]
+
+    def get_model(self, product_pk, model_pk):
+        try:
+            return ProductModel.objects.get(pk=model_pk, product_id=product_pk)
+        except ProductModel.DoesNotExist:
+            return None
+
+    def post(self, request, product_pk, model_pk):
+        model = self.get_model(product_pk, model_pk)
+        if not model:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminProductModelImageSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save(model=model)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminProductModelImageDetailView(APIView):
+    """DELETE a single product model image"""
+    permission_classes = [AllowAny]
+
+    def get_object(self, product_pk, model_pk, image_pk):
+        try:
+            return ProductModelImage.objects.get(
+                pk=image_pk, model_id=model_pk, model__product_id=product_pk
+            )
+        except ProductModelImage.DoesNotExist:
+            return None
+
+    def delete(self, request, product_pk, model_pk, image_pk):
+        obj = self.get_object(product_pk, model_pk, image_pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj.image.delete(save=False)
         obj.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

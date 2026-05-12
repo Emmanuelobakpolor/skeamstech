@@ -60,7 +60,7 @@ class ShopProductSerializer(ModelSerializer):
     def get_image_url(self, obj):
         # Use first gallery image if available, otherwise use hero image
         if obj.images.exists():
-            return obj.images.first().image.url
+            return build_image_url(self, obj.images.first().image)
         return build_image_url(self, obj.image)
 
     def get_specs(self, obj):
@@ -222,7 +222,7 @@ class AdminShopProductSerializer(ModelSerializer):
     def get_image_url(self, obj):
         # Use first gallery image if available, otherwise use hero image
         if obj.images.exists():
-            return obj.images.first().image.url
+            return build_image_url(self, obj.images.first().image)
         return build_image_url(self, obj.image)
 
     class Meta:

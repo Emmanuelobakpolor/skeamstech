@@ -53,7 +53,7 @@ class ShopProductSerializer(ModelSerializer):
     specs = SerializerMethodField()
     category_name = CharField(source='category.name', read_only=True)
     images = ProductImageSerializer(many=True, read_only=True)
-    models = ProductModelSerializer(many=True, read_only=True, source='product_models')
+    product_models = ProductModelSerializer(many=True, read_only=True)
 
     def get_image_url(self, obj):
         request = self.context.get('request')
@@ -86,7 +86,7 @@ class ShopProductSerializer(ModelSerializer):
             'application',
             'image_url',
             'images',
-            'models',
+            'product_models',
             'specs',
             'category_name',
         ]
@@ -208,7 +208,7 @@ class AdminShopProductSerializer(ModelSerializer):
     image_url = SerializerMethodField()
     category_name = CharField(source='category.name', read_only=True)
     images = AdminProductImageSerializer(many=True, read_only=True)
-    product_models = AdminProductModelSerializer(many=True, read_only=True, source='product_models')
+    product_models = AdminProductModelSerializer(many=True, read_only=True)
 
     def get_image_url(self, obj):
         if obj.image:

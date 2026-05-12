@@ -12,10 +12,6 @@ from .views import (
     AdminShopProductDetailView,
     AdminProductImageListCreateView,
     AdminProductImageDetailView,
-    AdminProductModelListCreateView,
-    AdminProductModelDetailView,
-    AdminProductModelImageListCreateView,
-    AdminProductModelImageDetailView,
 )
 
 urlpatterns = [
@@ -34,10 +30,4 @@ urlpatterns = [
     # Product image sub-resources
     path('admin/products/<int:product_pk>/images/', AdminProductImageListCreateView.as_view()),
     path('admin/products/<int:product_pk>/images/<int:image_pk>/', AdminProductImageDetailView.as_view()),
-    # Product model sub-resources
-    path('admin/products/<int:product_pk>/models/', AdminProductModelListCreateView.as_view()),
-    path('admin/products/<int:product_pk>/models/<int:model_pk>/', AdminProductModelDetailView.as_view()),
-    # Product model image sub-resources
-    path('admin/products/<int:product_pk>/models/<int:model_pk>/images/', AdminProductModelImageListCreateView.as_view()),
-    path('admin/products/<int:product_pk>/models/<int:model_pk>/images/<int:image_pk>/', AdminProductModelImageDetailView.as_view()),
 ]

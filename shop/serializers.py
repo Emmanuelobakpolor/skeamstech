@@ -60,3 +60,86 @@ class ShopTabSerializer(ModelSerializer):
     class Meta:
         model = ShopTab
         fields = ['id', 'name', 'display_name', 'description', 'order', 'is_hardcoded', 'categories']
+
+
+# ============================================================================
+# ADMIN SERIALIZERS (for write operations)
+# ============================================================================
+
+
+class AdminShopTabSerializer(ModelSerializer):
+    """Writable serializer for admin operations on ShopTab"""
+
+    class Meta:
+        model = ShopTab
+        fields = [
+            'id',
+            'name',
+            'display_name',
+            'description',
+            'order',
+            'is_active',
+            'is_hardcoded',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
+class AdminShopCategorySerializer(ModelSerializer):
+    """Writable serializer for admin operations on ShopCategory"""
+
+    tab_name = CharField(source='tab.display_name', read_only=True)
+
+    class Meta:
+        model = ShopCategory
+        fields = [
+            'id',
+            'tab',
+            'tab_name',
+            'name',
+            'subtitle',
+            'is_active',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'tab_name', 'created_at']
+
+
+class AdminShopProductSerializer(ModelSerializer):
+    """Writable serializer for admin operations on ShopProduct with image upload"""
+
+    image_url = SerializerMethodField()
+    category_name = CharField(source='category.name', read_only=True)
+
+    def get_image_url(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
+
+    class Meta:
+        model = ShopProduct
+        fields = [
+            'id',
+            'category',
+            'category_name',
+            'name',
+            'description',
+            'application',
+            'image',
+            'image_url',
+            'spec_speed',
+            'spec_weight',
+            'spec_voltage',
+            'spec_power',
+            'spec_storage',
+            'spec_connectivity',
+            'is_active',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'category_name', 'image_url', 'created_at']
+        extra_kwargs = {
+            'image': {
+                'required': False,
+                'allow_null': True,
+                'write_only': True,
+            }
+        }

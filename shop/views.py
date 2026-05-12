@@ -2,8 +2,17 @@ from django.db.models import Q, Prefetch
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from rest_framework import status
 from .models import ShopTab, ShopCategory, ShopProduct
-from .serializers import ShopTabSerializer, ShopCategorySerializer, ShopProductSerializer
+from .serializers import (
+    ShopTabSerializer,
+    ShopCategorySerializer,
+    ShopProductSerializer,
+    AdminShopTabSerializer,
+    AdminShopCategorySerializer,
+    AdminShopProductSerializer,
+)
 
 
 class ShopTabsListView(APIView):
@@ -90,3 +99,199 @@ class ShopSearchView(APIView):
             context={'request': request}
         )
         return Response(serializer.data)
+
+
+# ============================================================================
+# ADMIN VIEWS (CRUD endpoints)
+# ============================================================================
+
+
+class AdminShopTabListCreateView(APIView):
+    """Admin: GET all tabs (including inactive) + POST to create new tab"""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        tabs = ShopTab.objects.all().order_by('order', 'name')
+        serializer = AdminShopTabSerializer(tabs, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = AdminShopTabSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminShopTabDetailView(APIView):
+    """Admin: GET/PUT/PATCH/DELETE single tab"""
+    permission_classes = [AllowAny]
+
+    def get_object(self, pk):
+        try:
+            return ShopTab.objects.get(pk=pk)
+        except ShopTab.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminShopTabSerializer(obj)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminShopTabSerializer(obj, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminShopTabSerializer(obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminShopCategoryListCreateView(APIView):
+    """Admin: GET categories (supports ?tab=<id> filter) + POST to create"""
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        queryset = ShopCategory.objects.all()
+        tab_id = request.query_params.get('tab')
+        if tab_id:
+            queryset = queryset.filter(tab_id=tab_id)
+        queryset = queryset.order_by('tab', 'name')
+        serializer = AdminShopCategorySerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = AdminShopCategorySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminShopCategoryDetailView(APIView):
+    """Admin: GET/PUT/PATCH/DELETE single category"""
+    permission_classes = [AllowAny]
+
+    def get_object(self, pk):
+        try:
+            return ShopCategory.objects.get(pk=pk)
+        except ShopCategory.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminShopCategorySerializer(obj)
+        return Response(serializer.data)
+
+    def put(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminShopCategorySerializer(obj, data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminShopCategorySerializer(obj, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class AdminShopProductListCreateView(APIView):
+    """Admin: GET products (supports ?category=<id> filter) + POST to create with image"""
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get(self, request):
+        queryset = ShopProduct.objects.all().select_related('category')
+        category_id = request.query_params.get('category')
+        if category_id:
+            queryset = queryset.filter(category_id=category_id)
+        queryset = queryset.order_by('category', 'name')
+        serializer = AdminShopProductSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    def post(self, request):
+        serializer = AdminShopProductSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminShopProductDetailView(APIView):
+    """Admin: GET/PATCH/DELETE single product"""
+    permission_classes = [AllowAny]
+    parser_classes = [MultiPartParser, FormParser, JSONParser]
+
+    def get_object(self, pk):
+        try:
+            return ShopProduct.objects.get(pk=pk)
+        except ShopProduct.DoesNotExist:
+            return None
+
+    def get(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminShopProductSerializer(obj, context={'request': request})
+        return Response(serializer.data)
+
+    def patch(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        serializer = AdminShopProductSerializer(
+            obj,
+            data=request.data,
+            partial=True,
+            context={'request': request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        obj = self.get_object(pk)
+        if not obj:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        obj.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

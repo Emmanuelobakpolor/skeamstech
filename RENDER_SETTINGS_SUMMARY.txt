@@ -1,0 +1,188 @@
+RENDER.COM SETTINGS - YOUR ACKED BACKEND
+========================================================================
+
+WHAT YOU NEED TO DO ON RENDER DASHBOARD:
+
+1. CREATE ACCOUNT
+   - Go to https://render.com
+   - Sign up with GitHub
+   - Verify email
+
+2. CREATE POSTGRESQL DATABASE
+   - Click: New + > PostgreSQL
+   - Name: acked-postgres
+   - Database: ackeddb
+   - User: ackeddb_user
+   - Region: Oregon (or closest)
+   - Plan: Free tier
+   - SAVE THE CREDENTIALS!
+
+3. CREATE WEB SERVICE
+   - Click: New + > Web Service
+   - Connect GitHub repository
+   - Name: acked-backend
+   - Environment: Python 3
+   - Root Directory: acked/
+
+   Build Command:
+   pip install -r requirements.txt && python manage.py collectstatic --noinput
+
+   Start Command:
+   gunicorn acked.wsgi:application --bind 0.0.0.0:$PORT
+
+   - Plan: Free tier
+   - Click "Create Web Service"
+   - Wait for build (3-5 min)
+
+4. ADD ENVIRONMENT VARIABLES
+   - Go to Service Dashboard > Environment tab
+   - Click "Add Environment Variable" 14 times
+
+   Django (3):
+     SECRET_KEY = [generate new one]
+     DEBUG = False
+     ALLOWED_HOSTS = acked-backend.onrender.com,localhost
+
+   Database (6):
+     DB_ENGINE = django.db.backends.postgresql
+     DB_NAME = ackeddb
+     DB_USER = ackeddb_user
+     DB_PASSWORD = [from PostgreSQL]
+     DB_HOST = dpg-xxxxxxxxxxxxx.render.com
+     DB_PORT = 5432
+
+   Cloudinary (3):
+     CLOUDINARY_CLOUD_NAME = [from cloudinary.com]
+     CLOUDINARY_API_KEY = [from cloudinary.com]
+     CLOUDINARY_API_SECRET = [from cloudinary.com]
+
+   Security (2):
+     CORS_ALLOWED_ORIGINS = http://localhost:3000,https://your-frontend.vercel.app
+     CSRF_TRUSTED_ORIGINS = https://your-frontend.vercel.app
+
+   After adding: Service auto-redeploys
+
+5. RUN MIGRATIONS
+   - Go to Service Dashboard > Shell tab
+   - Click "Connect"
+   - Type: python manage.py migrate
+   - Wait for completion
+
+6. TEST
+   - Visit: https://acked-backend.onrender.com/shop/categories/
+   - Should see JSON data
+
+========================================================================
+
+YOUR SERVICE DASHBOARD TABS:
+
+1. Overview
+   - Shows status (Live = green)
+   - Shows URL: https://acked-backend.onrender.com
+   - Shows memory & CPU usage
+
+2. Environment
+   - Shows all environment variables
+   - Add/edit variables here
+
+3. Logs
+   - Shows build logs
+   - Shows runtime logs
+   - Check here if something breaks
+
+4. Shell
+   - Web terminal
+   - Run commands like: python manage.py migrate
+
+========================================================================
+
+BUILD & START COMMANDS (EXACT):
+
+Build Command:
+pip install -r requirements.txt && python manage.py collectstatic --noinput
+
+Start Command:
+gunicorn acked.wsgi:application --bind 0.0.0.0:$PORT
+
+========================================================================
+
+POSTGRESQL SETTINGS (From Step 2):
+
+Name:        acked-postgres
+Region:      Same as Web Service
+Database:    ackeddb
+User:        ackeddb_user
+Password:    [Strong password you create]
+Port:        5432
+Host:        dpg-xxxxxxxxxxxxx.render.com (Render gives this)
+
+========================================================================
+
+WEB SERVICE SETTINGS (Step 3):
+
+Name:                acked-backend
+Environment:         Python 3
+Root Directory:      acked/
+Build Command:       [see above]
+Start Command:       [see above]
+Region:              Same as PostgreSQL
+Plan:                Free tier (good for testing)
+
+After creating:
+- Status should show "Live" (green)
+- URL will be: https://acked-backend.onrender.com
+
+========================================================================
+
+ENVIRONMENT VARIABLES (14 TOTAL):
+
+Add all 14 in Environment tab, one at a time.
+
+After each addition, Render auto-redeploys.
+
+See RENDER_ENVIRONMENT_VARIABLES.md for exact values.
+
+========================================================================
+
+TIMELINE:
+
+Create Account:      5 min
+Create Database:     2 min (+ 1 min creation time)
+Create Service:      5 min (+ 3-5 min build time)
+Add Variables:       5 min (+ 1 min redeploy time)
+Run Migrations:      2 min
+Test:               2 min
+────────────────
+TOTAL:              20-30 minutes
+
+========================================================================
+
+AFTER DEPLOYMENT:
+
+Your URLs:
+- API:        https://acked-backend.onrender.com
+- Categories: https://acked-backend.onrender.com/shop/categories/
+- Products:   https://acked-backend.onrender.com/shop/products/
+
+Update frontend to use:
+  https://acked-backend.onrender.com
+
+========================================================================
+
+IF SOMETHING BREAKS:
+
+1. Check "Logs" tab
+2. Look for error messages
+3. Common issues:
+   - Missing environment variable
+   - Database connection failed
+   - Code has syntax error
+
+Fix locally and push to GitHub - Render auto-redeploys!
+
+========================================================================
+
+DETAILED GUIDE: See RENDER_DASHBOARD_SETUP.md
+ENVIRONMENT VARIABLES: See RENDER_ENVIRONMENT_VARIABLES.md
+
+========================================================================
